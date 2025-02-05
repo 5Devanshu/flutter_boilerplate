@@ -7,41 +7,31 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch:
   schedule:
-    - cron: '* * * * *' # Scheduled to run daily at midnight
+    - cron: '* * * * *'  # Run every minute
 
 jobs:
   build:
-    runs-on: ubuntu-latest # Default runner
+    runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout and Setup
+      # 1. Checkout Code
       - name: Checkout Code
         uses: actions/checkout@v2
 
+      # 2. Set up Flutter SDK with a specific version
       - name: Set up Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'latest' # Use the latest Flutter stable version
+          flutter-version: '3.7.0'  # Specify a stable version (change to the latest stable)
 
-      # 2. Code Quality Checks
+      # 3. Code Quality Checks
       - name: Flutter Analyze (Linting)
         run: flutter analyze
 
       - name: Flutter Test (Unit Tests)
         run: flutter test
-
-      # 3. Build Process
-      - name: Build APK (Android)
-        run: flutter build apk --release
-        
-      - name: Build AAB (Android App Bundle)
-        run: flutter build appbundle --release
-
-      - name: Build IPA (iOS) [macOS runner]
-        if: runner.os == 'macOS'
-        run: flutter build ios --release --no-codesign
 
 
 
