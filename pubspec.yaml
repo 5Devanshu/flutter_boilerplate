@@ -21,7 +21,6 @@ dependencies:
   envied: ^1.1.0
 
    # Update to the latest version of envied_generator
-
   flutter:
     sdk: flutter
   flutter_native_splash: ^2.3.5
