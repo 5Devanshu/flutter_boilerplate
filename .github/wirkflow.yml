@@ -1,0 +1,46 @@
+name: Flutter CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual trigger
+  schedule:
+    - cron: '1 * * * *' # Scheduled to run daily at midnight
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # Default runner
+
+    steps:
+      # 1. Checkout and Setup
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'latest' # Use the latest Flutter stable version
+
+      # 2. Code Quality Checks
+      - name: Flutter Analyze (Linting)
+        run: flutter analyze
+
+      - name: Flutter Test (Unit Tests)
+        run: flutter test
+
+      # 3. Build Process
+      - name: Build APK (Android)
+        run: flutter build apk --release
+        
+      - name: Build AAB (Android App Bundle)
+        run: flutter build appbundle --release
+
+      - name: Build IPA (iOS) [macOS runner]
+        if: runner.os == 'macOS'
+        run: flutter build ios --release --no-codesign
+
+      
