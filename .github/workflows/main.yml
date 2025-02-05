@@ -9,7 +9,7 @@ on:
       - main
   workflow_dispatch: # Allows manual trigger
   schedule:
-    - cron: '0 0 * * *' # Scheduled to run daily at midnight
+    - cron: '* * * * *' # Scheduled to run daily at midnight
 
 jobs:
   build:
