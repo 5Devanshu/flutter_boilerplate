@@ -1,37 +1,123 @@
 name: Flutter CI/CD Pipeline
 
+# Workflow triggers
 on:
   push:
     branches:
-      - main
+      - main  # Runs on push to the 'main' branch
   pull_request:
     branches:
-      - main
-  workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * *'  # Run every minute
+      - main  # Runs on pull requests targeting 'main'
+  workflow_dispatch:  # Allows manual trigger
+  schedule:  # Allows scheduling the workflow (e.g., nightly)
+    - cron: '0 0 * * *'  # Example: runs daily at midnight
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
+  # Job 1: Checkout & Setup
+  checkout-setup:
+    runs-on: macos-latest  # macOS is needed for iOS build
+    
     steps:
-      # 1. Checkout Code
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v2
 
-      # 2. Set up Flutter SDK with a specific version
       - name: Set up Flutter SDK
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.10.0'  # Specify a stable version (change to the latest stable)
+          flutter-version: 'stable'  # Or specify the Flutter version you need
 
-      # 3. Code Quality Checks
-      - name: Flutter Analyze (Linting)
-        run: flutter analyze
+  # Job 2: Code Quality Checks
+  code-quality:
+    runs-on: ubuntu-latest  # Ubuntu is fine for linting and tests
+    
+    needs: checkout-setup
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
 
-      - name: Flutter Test (Unit Tests)
-        run: flutter test
+      - name: Install dependencies
+        run: flutter pub get
 
+      - name: Run Flutter analyze
+        run: flutter analyze  # Performs static code analysis
+
+      - name: Run unit tests
+        run: flutter test  # Executes Flutter tests
+
+  # Job 3: Build Process
+  build:
+    runs-on: macos-latest  # macOS is required for iOS build
+    
+    needs: code-quality
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Android APK
+        run: flutter build apk --release  # Builds release APK for Android
+
+      - name: Build Android AAB
+        run: flutter build appbundle --release  # Builds the Android AAB for Play Store
+
+      - name: Build iOS IPA
+        run: flutter build ios --release --no-codesign  # Builds iOS IPA (without signing)
+
+      - name: Upload Android APK artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload Android AAB artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: android-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+
+      - name: Upload iOS IPA artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ios-ipa
+          path: build/ios/iphoneos/Runner.ipa
+
+  # Job 4: Deployment
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest  # Deployment steps can be done on Ubuntu
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Deploy Android to Firebase App Distribution
+        if: success() && github.ref == 'refs/heads/main'
+        run: |
+          curl -sL https://firebase.tools | bash
+          firebase appdistribution:distribute build/app/outputs/flutter-apk/app-release.apk --app ${{ secrets.FIREBASE_APP_ID }} --groups "testers" --token ${{ secrets.FIREBASE_AUTH_TOKEN }}
+
+      - name: Deploy to Google Play Store (Fastlane)
+        if: success() && github.ref == 'refs/heads/main'
+        run: |
+          gem install fastlane
+          fastlane android beta --json_key ${{ secrets.FASTLANE_ANDROID_JSON_KEY }}
+
+      - name: Deploy to Apple App Store (Fastlane)
+        if: success() && github.ref == 'refs/heads/main'
+        run: |
+          gem install fastlane
+          fastlane ios beta --username ${{ secrets.FASTLANE_APPLE_USERNAME }} --app_identifier ${{ secrets.FASTLANE_APPLE_CERT }} --password ${{ secrets.FASTLANE_APPLE_PASSWORD }}
 
 
