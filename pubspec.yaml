@@ -46,5 +46,5 @@ flutter_native_splash:
   image: assets/splash/splash.png
 
 flutter:
-  # The following line ensures that the Material Icons font is included with your application
   uses-material-design: true
+
