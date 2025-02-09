@@ -6,55 +6,43 @@ class ErrorInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    var dioError = err;
+    // Centralizing the error handling logic in a method
+    var dioError = err.copyWith(error: _getErrorMessage(err));
+    
+    // Passing the modified error to the next handler
+    return handler.next(dioError);
+  }
+
+  // Centralized method to generate error messages based on the error type
+  String _getErrorMessage(DioException err) {
     switch (err.type) {
       case DioExceptionType.cancel:
-        dioError = err.copyWith(error: 'Request to API server was cancelled');
+        return 'Request to API server was cancelled';
       case DioExceptionType.connectionTimeout:
-        dioError = err.copyWith(error: 'Connection to API server timed out');
+        return 'Connection to API server timed out';
       case DioExceptionType.receiveTimeout:
-        dioError = err.copyWith(
-          error: 'Receive timeout in connection with API server',
-        );
+        return 'Receive timeout in connection with API server';
       case DioExceptionType.sendTimeout:
-        dioError = err.copyWith(
-          error: 'Send timeout in connection with API server',
-        );
+        return 'Send timeout in connection with API server';
       case DioExceptionType.badResponse:
-        if (err.response!.data != null) {
-          if (err.response!.data is String) {
-            dioError = err.copyWith(
-              error: '${err.response!.statusCode}: ${err.response!.data}',
-            );
-          } else {
-            dioError = err.copyWith(error: err.response.toString());
-          }
+        if (err.response != null) {
           if (err.response!.statusCode == 404) {
-            dioError = err.copyWith(
-              error: '${err.response!.statusCode}: Resource not found.',
-            );
+            return '404: Resource not found.';
           }
           if (err.response!.statusCode == 500) {
-            dioError = err.copyWith(
-              error: '${err.response!.statusCode}: Internal server error.',
-            );
+            return '500: Internal server error.';
           }
-        } else {
-          dioError = err.copyWith(
-            error: 'Received invalid status code: ${err.response!.statusCode}',
-          );
+          return '${err.response!.statusCode}: ${err.response!.data}';
         }
+        return 'Received invalid status code: ${err.response?.statusCode}';
       case DioExceptionType.badCertificate:
-        dioError = err.copyWith(error: 'Certificate validation failed');
+        return 'Certificate validation failed';
       case DioExceptionType.connectionError:
-        dioError = err.copyWith(
-          error: 'Connection to API server failed due to internet connection',
-        );
+        return 'Connection to API server failed due to internet connection';
       case DioExceptionType.unknown:
-        dioError = err.copyWith(
-          error: 'Connection to API server failed due to unknown error',
-        );
+        return 'Connection to API server failed due to unknown error';
+      default:
+        return 'An unknown error occurred';
     }
-    return handler.next(dioError);
   }
 }
